@@ -70,4 +70,17 @@ jobs:
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_6E1FFAA94E76450483DEA3999E730084 }}
           sku: 'flexconsumption'
+
+      - name: 'Configure App Settings'
+        uses: Azure/appservice-settings@v1
+        with:
+          app-name: 'kaimcp'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_6E1FFAA94E76450483DEA3999E730084 }}
+          app-settings-json: |
+            [
+              { "name": "FUNCTIONS_WORKER_RUNTIME", "value": "node" },
+              { "name": "FUNCTIONS_EXTENSION_VERSION", "value": "~4" },
+              { "name": "AzureWebJobsFeatureFlags", "value": "EnableWorkerIndexing" }
+            ]
         

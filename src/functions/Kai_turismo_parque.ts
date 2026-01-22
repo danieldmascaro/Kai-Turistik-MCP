@@ -1,4 +1,5 @@
-import { app, HttpRequest, type HttpResponseInit, InvocationContext } from "@azure/functions";
+import { app } from "@azure/functions";
+import type { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import "dotenv/config";
 import { triageAgentTurismo } from "../tour_agents/tour_agents.js";
 import { triageAgentCerro } from "../parquemet_agents/parquemet_agents.js";

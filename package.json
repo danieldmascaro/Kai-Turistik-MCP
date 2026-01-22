@@ -2,9 +2,12 @@
   "name": "agents",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/main.ts",
+    "build": "tsc -p .",
+    "watch": "tsc -w -p .",
+    "start": "func start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@azure/functions": "^4.6.0",
     "@openai/agents": "^0.3.4",
     "dotenv": "^17.2.3",
     "mssql": "^12.2.0",
