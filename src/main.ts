@@ -1,0 +1,97 @@
+import "dotenv/config";
+import { triageAgentTurismo } from "./tour_agents/tour_agents.js";
+import { triageAgentCerro } from "./parquemet_agents/parquemet_agents.js";
+import {
+  run,
+  InputGuardrailTripwireTriggered,
+} from "@openai/agents";
+import { comandoSaludoHandler } from "./prompting/helpers/saludos.js";
+import readline from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
+import { armarPromptParaAgente, guardarInteraccion, borrarMemoriaUID, getAreaNegocio } from "./helpers/user_config/user_settings.js";
+import { closePool } from "./helpers/db_helpers/db.js";
+import type { AreaNegocio } from "./prompting/types.js";
+import { string_fecha_hora } from "./prompting/helpers/fecha.js";
+
+// User Id y Prompt desde consola
+const userId = "Local Master MCP";
+let areaNegocio = await getAreaNegocio(userId) as AreaNegocio;
+const rl = readline.createInterface({ input, output });
+const userPrompt = await rl.question("Ingrese un prompt: ");
+rl.close();
+
+
+async function main() {
+  let reiniciosArea = 0;
+  const maxReiniciosArea = 3;
+  try {
+    while (true) {
+      try {
+        if (userPrompt.trim() === "#Reiniciar") {
+          await borrarMemoriaUID(userId);
+          console.log("Memoria reiniciada para el usuario:", userId);
+          return;
+        } else if (userPrompt.trim().startsWith("#SaludoKaiV2")) {
+          // Consultar area de negocio actual
+          await comandoSaludoHandler(userPrompt, userId, string_fecha_hora, areaNegocio);
+          return;
+        }
+
+        // 1) Armar prompt CON historial (antes del run)
+        const promptArmado = await armarPromptParaAgente({
+          uid: userId,
+          mensaje_usuario: userPrompt,
+          area_negocio: areaNegocio,
+        });
+        let result;
+        if (areaNegocio === "Turismo") {
+          console.log("Area de negocio actual: Turismo");
+          result = await run(triageAgentTurismo, promptArmado, {
+            context: { userId, userPrompt, areaNegocio },
+          });
+        } else if (areaNegocio === "ParqueMet") {
+          result = await run(triageAgentCerro, promptArmado, {
+            context: { userId, userPrompt, areaNegocio },
+          });
+          console.log("Area de negocio actual: ParqueMet");
+        }
+
+        const respuestaBot = String(result?.finalOutput);
+        console.log(respuestaBot);
+
+        // 3) Guardar interaccion (despues del run)
+        await guardarInteraccion({
+          uid: userId,
+          mensaje_usuario: userPrompt,
+          mensaje_bot: respuestaBot,
+          string_fecha_hora,
+          areaNegocio: areaNegocio,
+        });
+        return;
+      } catch (e) {
+        if (e instanceof InputGuardrailTripwireTriggered) {
+          const outputInfo = e.result?.output?.outputInfo as { reason?: string } | undefined;
+          if (outputInfo?.reason === "AREA_CHANGE") {
+            reiniciosArea += 1;
+            if (reiniciosArea > maxReiniciosArea) {
+              console.error("No se pudo estabilizar el area de negocio, intenta nuevamente.");
+              return;
+            }
+            areaNegocio = await getAreaNegocio(userId) as AreaNegocio;
+            continue;
+          }
+          console.error("Hola, soy Kai. Puedo ayudarte con solicitudes relacionadas a Turistik.");
+          return;
+        }
+        throw e;
+      }
+    }
+  } finally {
+    try {
+      await closePool();
+    } catch (err) {
+      console.error("No se pudo cerrar el pool SQL:", err);
+    }
+  }
+}
+main().catch((err) => console.error(err));
