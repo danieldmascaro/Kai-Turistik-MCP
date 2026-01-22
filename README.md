@@ -4,6 +4,8 @@
 
 Esta carpeta contiene la capa de **agentes LLM** que orquesta prompts, memoria y conexion con el servidor MCP. El foco es enrutar solicitudes al agente correcto y mantener contexto persistente usando SQL.
 
+Desplegado a Azure Functions
+
 ---
 
 ## Estructura rapida
